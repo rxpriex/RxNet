@@ -1,4 +1,4 @@
-# rx-socket – Simple Cross-Platform Socket Library in C
+# RxNet – Simple Cross-Platform Socket Library in C
 
 A lightweight, cross-platform (Windows + Linux) socket wrapper library written in C.  
 It provides an easy-to-use API for TCP server/client sockets, threaded connection acceptance, asynchronous data listening, and a basic event queue.
