@@ -14,7 +14,7 @@ rx_socket_t *make_socket(int family, int protocol, int type) {
 }
 
 void def_socket(rx_socket_t *socket, char *addr, int port) {
-  socket->param.sin_addr.s_addr = addr == NULL ? ADDR_ANY : inet_addr(addr);
+  socket->param.sin_addr.s_addr = addr == NULL ? INADDR_ANY : inet_addr(addr);
   socket->param.sin_port = htons(port);
   socket->address = addr;
   if (socket->type == SERVER_SOCKET) {

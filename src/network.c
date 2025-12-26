@@ -22,9 +22,12 @@ void sock_err(socket_t sock, char *msg) {
   printf("Socket error occured: (%s). Last Error code: (%d)\n", msg,
          sock_errno);
   if (sock != INVALID_SOCKET)
-    closesocket(sock);
+    sock_close(sock);
 #else
-  perror(msg);
+    printf("Socket error occured: (%s). Last Error code: (%d)\n", msg,
+        sock_errno);
+    if (sock != INVALID_SOCKET)
+    sock_close(sock);
   if (sock != INVALID_SOCKET)
     close(sock);
 #endif

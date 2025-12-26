@@ -26,8 +26,10 @@ typedef int socket_t;
 #define TCP SOCK_STREAM
 #define UDP SOCK_DGRAM
 
-
+#include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
+#include <string.h>
 
 typedef enum {
     EVENT_CONNECTION,
