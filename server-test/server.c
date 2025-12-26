@@ -1,8 +1,4 @@
-#include "network.h"
-#include <socket.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <winsock2.h>
+#include <RxNet/socket.h>
 
 int main(int argc, char **argv) {
   net_init();

@@ -1,7 +1,7 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
-#include <network.h>
+#include <RxNet/network.h>
 
 #define CLIENT_SOCKET 1
 #define SERVER_SOCKET 2

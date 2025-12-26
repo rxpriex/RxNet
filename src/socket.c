@@ -1,10 +1,5 @@
-#include "network.h"
-#include <psdk_inc/_socket_types.h>
+#include <RxNet/socket.h>
 #include <pthread.h>
-#include <socket.h>
-#include <stdio.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
 
 rx_socket_t *make_socket(int family, int protocol, int type) {
   rx_socket_t *sock = malloc(sizeof(rx_socket_t));
