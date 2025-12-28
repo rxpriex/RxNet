@@ -7,22 +7,22 @@
 #define SERVER_SOCKET 2
 
 typedef struct {
-  socket_t socket;
+  void *socket;
+  void *next_connection;
+} rx_connection_t;
+
+typedef struct {
+  socket_t sock_index;
 
   struct sockaddr_in param;
+  rx_connection_t *active_connections;
+  network_event *event_queue;
 
   int type;
   char *address;
 
   char buffer[1024];
 } rx_socket_t;
-
-typedef struct {
-    rx_socket_t* socket;
-    void* next_connection;
-} rx_connection_t;
-
-static rx_connection_t* active_connections;
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,25 +48,33 @@ extern void def_socket(rx_socket_t *, char *, int);
  * @brief Connects to a remote socket(defined in socket parameters)
  * @param socket The socket to connect
  */
-extern int connect_socket(rx_socket_t*);
+extern int connect_socket(rx_socket_t *);
 
 /*
- * @brief Accept remote connections in a seperate thread and push events in case of a connection
+ * @brief Accept remote connections in a seperate thread and push events in case
+ * of a connection
  * @param socket The socket that accepts connections
  */
-extern int accept_socket(rx_socket_t*);
+extern int accept_socket(rx_socket_t *);
 
 /*
  * @brief Send data to the connected socket
  * @param socket The socket that sends data
  */
-extern int send_data(rx_socket_t*,char*,int);
+extern int send_data(rx_socket_t *, char *, int);
 
 /*
- * @brief Listen for data in a seperate thread and push events in case data arrives
+ * @brief Listen for data in a seperate thread and push events in case data
+ * arrives
  * @param socket The socket that listens
  */
-extern int listen_for_data(rx_socket_t*);
+extern int listen_for_data(rx_socket_t *);
+
+/*
+ * @brief Terminate a socket
+ * @param socket Socket to be terminated
+ */
+extern void terminate_socket(rx_socket_t *, rx_socket_t *);
 
 #ifdef __cplusplus
 }

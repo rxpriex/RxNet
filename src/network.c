@@ -1,4 +1,5 @@
 #include <RxNet/network.h>
+#include <winsock2.h>
 
 int net_init() {
 #ifdef _WIN32
@@ -17,24 +18,17 @@ void net_cleanup() {
 #endif
 }
 
-void sock_err(socket_t sock, char *msg) {
-#ifdef _WIN32
-  printf("Socket error occured: (%s). Last Error code: (%d)\n", msg,
-         sock_errno);
-  if (sock != INVALID_SOCKET)
-    sock_close(sock);
-#else
-    printf("Socket error occured: (%s). Last Error code: (%d)\n", msg,
-        sock_errno);
-    if (sock != INVALID_SOCKET)
-    sock_close(sock);
-  if (sock != INVALID_SOCKET)
-    close(sock);
-#endif
+void net_err(void *cause, char *msg) {
+  err_type *type = malloc(sizeof(err_type));
+  type->cause = cause;
+  type->err = sock_errno;
+  printf("Network error occured: (%s). Last Error code: (%d)\n", msg,
+         type->err);
+  push_event(EVENT_NETWORK_ERROR, (void *)type);
 }
 
-socket_event *pop_event() {
-  socket_event *event = event_queue;
+network_event *pop_event() {
+  network_event *event = event_queue;
   if (event == NULL)
     return event;
   event_queue = event_queue->next_event;
@@ -42,7 +36,7 @@ socket_event *pop_event() {
 }
 
 void push_event(event_type type, void *caller) {
-  socket_event *event = malloc(sizeof(socket_event));
+  network_event *event = malloc(sizeof(network_event));
   event->type = type;
   event->caller = caller;
   event->next_event = NULL;
@@ -50,7 +44,7 @@ void push_event(event_type type, void *caller) {
     event_queue = event;
     return;
   }
-  socket_event *head = event_queue;
+  network_event *head = event_queue;
   while (head->next_event != NULL) {
     head = head->next_event;
   }

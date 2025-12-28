@@ -5,18 +5,18 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 typedef SOCKET socket_t;
-#define sock_close(s)        closesocket(s)
-#define sock_errno           WSAGetLastError()
+#define sock_close(s) closesocket(s)
+#define sock_errno WSAGetLastError()
 #else
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <unistd.h>
 typedef int socket_t;
 #define INVALID_SOCKET (-1)
 #define SOCKET_ERROR (-1)
-#define sock_close(s)        close(s)
-#define sock_errno           errno
+#define sock_close(s) close(s)
+#define sock_errno errno
 #endif
 
 #define IPV4 AF_INET
@@ -26,26 +26,34 @@ typedef int socket_t;
 #define TCP SOCK_STREAM
 #define UDP SOCK_DGRAM
 
-#include <stdlib.h>
-#include <stdio.h>
+#define CONNECTION_TERMINATED 10054
+
 #include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 typedef enum {
-    EVENT_CONNECTION,
-    EVENT_ACCEPTING_ERROR,
-    EVENT_DATA_RECEIVED,
-    EVENT_ERROR_WHILE_WAITING,
-}event_type;
+  EVENT_CONNECTION,
+  EVENT_ACCEPTING_ERROR,
+  EVENT_DATA_RECEIVED,
+  EVENT_ERROR_WHILE_WAITING,
+  EVENT_NETWORK_ERROR,
+} event_type;
 
 typedef struct {
-    event_type type;
-    void* caller;
+  event_type type;
+  void *caller;
 
-    void* next_event;
-}socket_event;
+  void *next_event;
+} network_event;
 
-static socket_event* event_queue;
+static network_event *event_queue;
+
+typedef struct {
+  void *cause;
+  int err;
+} err_type;
 
 #ifdef __cplusplus
 extern "C" {
@@ -66,19 +74,19 @@ extern void net_cleanup(void);
  * @brief A function when a socket error occurs
  * @param The socket that caused the error
  */
-extern void sock_err(socket_t, char*);
+extern void net_err(void *, char *);
 
 /*
  * @brief Pushes a new socket event to the event_queue
  * @param type The type of event
  * @param caller The object that called the event(might be 0)
  */
-extern void push_event(event_type, void*);
+extern void push_event(event_type, void *);
 
 /*
  * @brief Pops the oldest socket event from the event_queue
  */
-extern socket_event* pop_event();
+extern network_event *pop_event();
 
 #ifdef __cplusplus
 }
