@@ -1,4 +1,3 @@
-#include "RxNet/network.h"
 #include <RxNet/socket.h>
 #include <pthread.h>
 

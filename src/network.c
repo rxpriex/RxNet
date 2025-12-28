@@ -1,5 +1,4 @@
 #include <RxNet/network.h>
-#include <winsock2.h>
 
 int net_init() {
 #ifdef _WIN32

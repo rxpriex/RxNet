@@ -1,5 +1,4 @@
 #include <RxNet/socket.h>
-#include <inaddr.h>
 
 #ifdef _WIN32 // Windows specific debug functionality
 #include <psapi.h>

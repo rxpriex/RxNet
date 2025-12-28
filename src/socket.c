@@ -1,6 +1,4 @@
-#include "RxNet/network.h"
 #include <RxNet/socket.h>
-#include <psdk_inc/_socket_types.h>
 #include <pthread.h>
 #include <string.h>
 
