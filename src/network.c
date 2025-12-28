@@ -18,12 +18,7 @@ void net_cleanup() {
 }
 
 void net_err(void *cause, char *msg) {
-  err_type *type = malloc(sizeof(err_type));
-  type->cause = cause;
-  type->err = sock_errno;
-  printf("Network error occured: (%s). Last Error code: (%d)\n", msg,
-         type->err);
-  push_event(EVENT_NETWORK_ERROR, (void *)type);
+  printf("Network error occured: (%s).\n", msg);
 }
 
 network_event *pop_event() {
@@ -34,11 +29,19 @@ network_event *pop_event() {
   return event;
 }
 
-void push_event(event_type type, void *caller) {
+network_event *make_event(event_type type, void *caller, void *param) {
   network_event *event = malloc(sizeof(network_event));
+  memset(event, 0, sizeof(network_event));
+
   event->type = type;
   event->caller = caller;
-  event->next_event = NULL;
+  event->param = param;
+  event->err = sock_errno;
+
+  return event;
+}
+
+void push_event(network_event *event) {
   if (event_queue == NULL) {
     event_queue = event;
     return;

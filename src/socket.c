@@ -1,5 +1,7 @@
+#include "RxNet/network.h"
 #include <RxNet/socket.h>
 #include <pthread.h>
+#include <stdlib.h>
 #include <string.h>
 
 void add_connection(rx_socket_t *source, rx_socket_t *target) {
@@ -48,8 +50,11 @@ rx_socket_t *make_socket(int family, int protocol, int type) {
   sock->type = type;
   sock->param.sin_family = family;
 
-  if (sock_indx == INVALID_SOCKET)
+  if (sock_indx == INVALID_SOCKET) {
     net_err((void *)sock, "Socket creation failed");
+    free(sock);
+    return NULL;
+  }
   return sock;
 }
 
@@ -61,6 +66,9 @@ void def_socket(rx_socket_t *socket, char *addr, int port) {
     if (bind(socket->sock_index, (struct sockaddr *)&socket->param,
              sizeof(socket->param)) == SOCKET_ERROR) {
       net_err((void *)socket, "Error while binding server socket");
+    } else {
+      printf("Server bound to address:%ui and port:%us\n",
+             socket->param.sin_addr.s_addr, socket->param.sin_port);
     }
   }
 }
@@ -87,11 +95,11 @@ CONNECTION:
       accept(sock->sock_index, (struct sockaddr *)&conn->param, &addrLen);
   if (conn->sock_index != INVALID_SOCKET) {
     add_connection(sock, conn);
-    push_event(EVENT_CONNECTION, conn);
+    push_event(make_event(EVENT_CONNECTION, sock, conn));
     goto CONNECTION;
   }
 
-  push_event(EVENT_ACCEPTING_ERROR, args);
+  push_event(make_event(EVENT_NETWORK_ERROR, sock, conn));
   net_err(sock, "Error while accepting connection");
 
   return NULL;
@@ -124,13 +132,14 @@ int send_data(rx_socket_t *socket, char *data, int data_size) {
 static void *wait_on_data(void *args) {
   rx_socket_t *socket = (rx_socket_t *)args;
 LISTEN_FOR_DATA:
-  if (recv(socket->sock_index, socket->buffer, sizeof(socket->buffer), 0) !=
-      SOCKET_ERROR) {
-    push_event(EVENT_DATA_RECEIVED, socket);
+  long ret =
+      recv(socket->sock_index, socket->buffer, sizeof(socket->buffer), 0);
+  if (ret != SOCKET_ERROR && ret != PEER_DISCONNECT) {
+    push_event(make_event(EVENT_DATA_RECEIVED, socket, NULL));
     goto LISTEN_FOR_DATA;
   }
 
-  push_event(EVENT_ERROR_WHILE_WAITING, socket);
+  push_event(make_event(EVENT_NETWORK_ERROR, socket, NULL));
   net_err(socket, "Error while waiting for data");
 
   return NULL;
