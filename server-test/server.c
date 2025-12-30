@@ -1,5 +1,7 @@
 #include "RxNet/network.h"
 #include <RxNet/socket.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef _WIN32 // Windows specific debug functionality
 #include <psapi.h>
@@ -13,6 +15,17 @@ void print_memory_info() {
   }
 }
 #endif
+
+char *comb_str(char *a, int strlenA, char *b, int strlenB) {
+  char *res = malloc(strlenA + strlenB - 1);
+  char *indx = res;
+  while (*indx++ = *a++)
+    ;
+  indx--;
+  while (*indx++ = *b++)
+    ;
+  return res;
+}
 
 void write_to_clients(rx_socket_t *socket, char *buffer, int size) {
   rx_connection_t *head = socket->active_connections;
@@ -50,7 +63,8 @@ int main(int argc, char **argv) {
       rx_socket_t *caller = (rx_socket_t *)event->caller;
       switch (event->type) {
       case EVENT_CONNECTION:
-        printf("Client connected from: %ui\n",
+        printf("Client %llu connected from: %lu\n",
+               ((rx_socket_t *)event->caller)->sock_index,
                ((rx_socket_t *)event->caller)->param.sin_addr.s_addr);
         listen_for_data((rx_socket_t *)event->param);
         print_connections(socket);
@@ -58,8 +72,12 @@ int main(int argc, char **argv) {
         write_to_clients(socket, buffer, sizeof(buffer));
         break;
       case EVENT_DATA_RECEIVED:
-        printf("Data received from %ui: %s\n", caller->param.sin_addr.s_addr,
+        printf("Data received from %lu: %s\n", caller->param.sin_addr.s_addr,
                caller->buffer);
+        char* msg = malloc(strlen(caller->buffer) + 20);
+          snprintf(msg, strlen(caller->buffer)+20, "%llu:%s", caller->sock_index, caller->buffer);
+        write_to_clients(socket, msg, strlen(caller->buffer)+20);
+          free(msg);
         break;
       case EVENT_NETWORK_ERROR:
         printf("Network error encountered: %i\n", event->err);

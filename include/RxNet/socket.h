@@ -16,7 +16,6 @@ typedef struct {
 
   struct sockaddr_in param;
   rx_connection_t *active_connections;
-  network_event *event_queue;
 
   int type;
   char *address;

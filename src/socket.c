@@ -135,6 +135,7 @@ LISTEN_FOR_DATA:
   long ret =
       recv(socket->sock_index, socket->buffer, sizeof(socket->buffer), 0);
   if (ret != SOCKET_ERROR && ret != PEER_DISCONNECT) {
+    socket->buffer[ret] = '\0';
     push_event(make_event(EVENT_DATA_RECEIVED, socket, NULL));
     goto LISTEN_FOR_DATA;
   }

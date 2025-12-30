@@ -10,7 +10,7 @@ static void *listen_for_messages(void *args) {
       switch (event->type) {
       case EVENT_DATA_RECEIVED:
         caller = (rx_socket_t *)event->caller;
-        printf("Data received from server: %s\n", caller->buffer);
+        printf("%s", caller->buffer);
         break;
       }
     }
