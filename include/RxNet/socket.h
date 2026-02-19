@@ -2,6 +2,7 @@
 #define SOCKET_H
 
 #include <RxNet/network.h>
+#include <sys/socket.h>
 
 #define CLIENT_SOCKET 1
 #define SERVER_SOCKET 2
@@ -14,7 +15,8 @@ typedef struct {
 typedef struct {
   socket_t sock_index;
 
-  struct sockaddr_in param;
+  struct sockaddr_storage param;
+  socklen_t addrlen;
   rx_connection_t *active_connections;
 
   int type;
@@ -33,15 +35,11 @@ extern "C" {
  * @param protocl The protocol used(TCP,UDP)
  * @param type The type of socket(server or client socket)
  */
-extern rx_socket_t *make_socket(int, int, int);
+extern rx_socket_t *make_socket(char *, char *, struct addrinfo, int);
 
-/*
- * @brief Defines the socket parameters
- * @param socket The socket to define
- * @param addr The address to bind or connect to(depending on socket type)
- * @param port The port to bind or connect to(depending on socket type)
- */
-extern void def_socket(rx_socket_t *, char *, int);
+struct addrinfo get_socket_type(int, int);
+
+char *resolve_host(struct sockaddr *, socklen_t);
 
 /*
  * @brief Connects to a remote socket(defined in socket parameters)

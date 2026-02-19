@@ -53,6 +53,9 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 #  Testing executable that links against the library
 # ────────────────────────────────────────────────────────────────
 add_executable(server-test)
+target_compile_options(server-test PRIVATE
+    $<$<CONFIG:Debug>:-g>
+)
 
 collect_sources("${CMAKE_CURRENT_SOURCE_DIR}/server-test" TEST_SOURCES)
 
@@ -76,6 +79,9 @@ set_target_properties(server-test PROPERTIES
 )
 
 add_executable(client-test)
+target_compile_options(client-test PRIVATE
+    $<$<CONFIG:Debug>:-g>
+)
 
 collect_sources("${CMAKE_CURRENT_SOURCE_DIR}/client-test" TEST_SOURCES)
 

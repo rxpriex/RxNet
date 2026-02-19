@@ -2,6 +2,7 @@
 #include <RxNet/socket.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 
 #ifdef _WIN32 // Windows specific debug functionality
 #include <psapi.h>
@@ -51,9 +52,17 @@ void print_connections(rx_socket_t *socket) {
 }
 
 int main(int argc, char **argv) {
+  /* rx_socket_t *socket =
+       make_socket(NULL, "8888", get_socket_type(IPV6, 0), SERVER_SOCKET);
+   if (!socket) {
+     return -1;
+   }
+   accept_socket(socket);*/
   net_init();
-  rx_socket_t *socket = make_socket(IPV4, SOCK_STREAM, SERVER_SOCKET);
-  def_socket(socket, NULL, 54521);
+  rx_socket_t *socket =
+      make_socket(NULL, "8888", get_socket_type(IPV6, TCP), SERVER_SOCKET);
+  if (!socket)
+    return -1;
   accept_socket(socket);
 
   network_event *event;
@@ -61,23 +70,24 @@ int main(int argc, char **argv) {
     event = pop_event();
     if (event != NULL) {
       rx_socket_t *caller = (rx_socket_t *)event->caller;
+      char *addr =
+          resolve_host((struct sockaddr *)&(caller->param), caller->addrlen);
       switch (event->type) {
       case EVENT_CONNECTION:
-        printf("Client %llu connected from: %lu\n",
-               ((rx_socket_t *)event->caller)->sock_index,
-               ((rx_socket_t *)event->caller)->param.sin_addr.s_addr);
+        printf("Client %llu connected from: %s\n",
+               ((rx_socket_t *)event->caller)->sock_index, addr);
         listen_for_data((rx_socket_t *)event->param);
         print_connections(socket);
         char buffer[] = {"A new Client connected"};
         write_to_clients(socket, buffer, sizeof(buffer));
         break;
       case EVENT_DATA_RECEIVED:
-        printf("Data received from %lu: %s\n", caller->param.sin_addr.s_addr,
-               caller->buffer);
-        char* msg = malloc(strlen(caller->buffer) + 20);
-          snprintf(msg, strlen(caller->buffer)+20, "%llu:%s", caller->sock_index, caller->buffer);
-        write_to_clients(socket, msg, strlen(caller->buffer)+20);
-          free(msg);
+        printf("Data received from %s: %s\n", addr, caller->buffer);
+        char *msg = malloc(strlen(caller->buffer) + 20);
+        snprintf(msg, strlen(caller->buffer) + 20, "%llu:%s",
+                 caller->sock_index, caller->buffer);
+        write_to_clients(socket, msg, strlen(caller->buffer) + 20);
+        free(msg);
         break;
       case EVENT_NETWORK_ERROR:
         printf("Network error encountered: %i\n", event->err);
@@ -90,6 +100,7 @@ int main(int argc, char **argv) {
           break;
         }
       }
+      free(addr);
     }
     free(event);
   }

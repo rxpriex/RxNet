@@ -1,8 +1,10 @@
-#include "RxNet/network.h"
+#include <RxNet/network.h>
 #include <RxNet/socket.h>
+#include <netdb.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 
 void add_connection(rx_socket_t *source, rx_socket_t *target) {
   rx_connection_t *head = source->active_connections;
@@ -42,42 +44,57 @@ void remove_connection(rx_socket_t *source, rx_socket_t *target) {
   free(head);
 }
 
-rx_socket_t *make_socket(int family, int protocol, int type) {
-  rx_socket_t *sock = malloc(sizeof(rx_socket_t));
-  memset(sock, 0, sizeof(rx_socket_t));
-  socket_t sock_indx = socket(family, protocol, 0);
-  sock->sock_index = sock_indx;
-  sock->type = type;
-  sock->param.sin_family = family;
-
-  if (sock_indx == INVALID_SOCKET) {
-    net_err((void *)sock, "Socket creation failed");
-    free(sock);
-    return NULL;
-  }
+struct addrinfo get_socket_type(int family, int protocol) {
+  struct addrinfo sock = {0};
+  sock.ai_family = family != 0 ? family : AF_UNSPEC;
+  sock.ai_socktype = protocol;
   return sock;
 }
 
-void def_socket(rx_socket_t *socket, char *addr, int port) {
-  socket->param.sin_addr.s_addr = addr == NULL ? INADDR_ANY : inet_addr(addr);
-  socket->param.sin_port = htons(port);
-  socket->address = addr;
-  if (socket->type == SERVER_SOCKET) {
-    if (bind(socket->sock_index, (struct sockaddr *)&socket->param,
-             sizeof(socket->param)) == SOCKET_ERROR) {
-      net_err((void *)socket, "Error while binding server socket");
-    } else {
-      printf("Server bound to address:%ui and port:%us\n",
-             socket->param.sin_addr.s_addr, socket->param.sin_port);
-    }
+char *resolve_host(struct sockaddr *addr, socklen_t len) {
+  char *host = malloc(NI_MAXHOST);
+  int ret = getnameinfo(addr, len, host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+  if (ret)
+    return NULL;
+  return host;
+}
+
+rx_socket_t *make_socket(char *addr, char *port, struct addrinfo ftype,
+                         int type) {
+  rx_socket_t *sock = malloc(sizeof(rx_socket_t));
+  memset(sock, 0, sizeof(rx_socket_t));
+  struct addrinfo *res;
+  int err = getaddrinfo(addr, port, &ftype, &res);
+  if (err) {
+    net_err((void *)sock, "Socket creating failed\n");
+    free(sock);
+    return NULL;
   }
+  memcpy(&(sock->param), res->ai_addr, res->ai_addrlen);
+  sock->addrlen = res->ai_addrlen;
+  socket_t sock_indx = socket(res->ai_family, res->ai_socktype, 0);
+  sock->sock_index = sock_indx;
+  sock->type = type;
+
+  if (sock_indx == INVALID_SOCKET) {
+    net_err((void *)sock, "Socket creation failed\n");
+    free(sock);
+    return NULL;
+  }
+
+  if (type == SERVER_SOCKET) {
+    bind(sock->sock_index, (struct sockaddr *)&(sock->param), sock->addrlen);
+    printf("Socket bound to address %s and port %s\n", addr, port);
+  }
+
+  return sock;
 }
 
 int connect_socket(rx_socket_t *socket) {
   if (socket->type != CLIENT_SOCKET)
     return 0;
   if (connect(socket->sock_index, (struct sockaddr *)&socket->param,
-              sizeof(socket->param)) == SOCKET_ERROR) {
+              socket->addrlen) == SOCKET_ERROR) {
     net_err(socket, "Error while connecting socket");
     return 0;
   }
@@ -90,7 +107,7 @@ CONNECTION:
   rx_socket_t *conn = malloc(sizeof(rx_socket_t));
   memset(conn, 0, sizeof(rx_socket_t));
 
-  socklen_t addrLen = sizeof(conn->param);
+  socklen_t addrLen = conn->addrlen;
   conn->sock_index =
       accept(sock->sock_index, (struct sockaddr *)&conn->param, &addrLen);
   if (conn->sock_index != INVALID_SOCKET) {

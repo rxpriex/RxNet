@@ -9,6 +9,7 @@ typedef SOCKET socket_t;
 #define sock_errno WSAGetLastError()
 #else
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -21,7 +22,7 @@ typedef int socket_t;
 
 #define IPV4 AF_INET
 #define IPV6 AF_INET6
-#define UNIX AF_UNIX
+#define UNSPEC AF_UNSPEC
 
 #define TCP SOCK_STREAM
 #define UDP SOCK_DGRAM
@@ -86,7 +87,7 @@ extern void net_err(void *, char *);
  * @param type The type of event
  * @param caller The object that called the event(might be 0)
  */
-extern void push_event(network_event*);
+extern void push_event(network_event *);
 
 /*
  * @brief Pops the oldest socket event from the event_queue
@@ -99,7 +100,7 @@ extern network_event *pop_event();
  * @param caller The cause/location of the event
  * @param param Optional parameter
  */
-network_event *make_event(event_type , void *, void *);
+network_event *make_event(event_type, void *, void *);
 
 #ifdef __cplusplus
 }

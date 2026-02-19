@@ -1,3 +1,4 @@
+#include "RxNet/network.h"
 #include <RxNet/socket.h>
 #include <pthread.h>
 
@@ -19,8 +20,8 @@ static void *listen_for_messages(void *args) {
 
 int main(int argc, char **argv) {
   net_init();
-  rx_socket_t *socket = make_socket(IPV4, SOCK_STREAM, CLIENT_SOCKET);
-  def_socket(socket, "127.0.0.1", 54521);
+  rx_socket_t *socket =
+      make_socket("::1", "8888", get_socket_type(IPV6, TCP), CLIENT_SOCKET);
   if (connect_socket(socket)) {
     printf("Connection successful!\n");
 
