@@ -1,10 +1,8 @@
 #include <RxNet/network.h>
 #include <RxNet/socket.h>
-#include <netdb.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 
 void add_connection(rx_socket_t *source, rx_socket_t *target) {
   rx_connection_t *head = source->active_connections;
@@ -66,7 +64,7 @@ rx_socket_t *make_socket(char *addr, char *port, struct addrinfo ftype,
   struct addrinfo *res;
   int err = getaddrinfo(addr, port, &ftype, &res);
   if (err) {
-    net_err((void *)sock, "Socket creating failed\n");
+    net_err((void *)sock, "Socket creation failed\n");
     free(sock);
     return NULL;
   }

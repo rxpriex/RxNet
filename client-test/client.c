@@ -21,7 +21,7 @@ static void *listen_for_messages(void *args) {
 int main(int argc, char **argv) {
   net_init();
   rx_socket_t *socket =
-      make_socket("::1", "8888", get_socket_type(IPV6, TCP), CLIENT_SOCKET);
+      make_socket("127.0.0.1", "54515", get_socket_type(0, TCP), CLIENT_SOCKET);
   if (connect_socket(socket)) {
     printf("Connection successful!\n");
 
