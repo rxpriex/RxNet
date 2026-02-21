@@ -29,7 +29,6 @@ void remove_connection(rx_socket_t *source, rx_socket_t *target) {
   }
   if (((rx_connection_t *)head)->socket != target)
     return;
-  printf("Socket found: %p tail is %p\n", head, tail);
   if (head == tail) {
     if (!head->next_connection)
       source->active_connections = NULL;
@@ -62,6 +61,9 @@ rx_socket_t *make_socket(char *addr, char *port, struct addrinfo ftype,
   rx_socket_t *sock = malloc(sizeof(rx_socket_t));
   memset(sock, 0, sizeof(rx_socket_t));
   struct addrinfo *res;
+  if (type == SERVER_SOCKET) {
+    ftype.ai_flags = AI_PASSIVE;
+  }
   int err = getaddrinfo(addr, port, &ftype, &res);
   if (err) {
     net_err((void *)sock, "Socket creation failed\n");
@@ -81,7 +83,18 @@ rx_socket_t *make_socket(char *addr, char *port, struct addrinfo ftype,
   }
 
   if (type == SERVER_SOCKET) {
-    bind(sock->sock_index, (struct sockaddr *)&(sock->param), sock->addrlen);
+    int yes = 1;
+    if (res->ai_family == IPV6) {
+      setsockopt(sock->sock_index, IPPROTO_IPV6, IPV6_V6ONLY, &yes,
+                 sizeof(yes));
+    }
+
+    setsockopt(sock->sock_index, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+    if (bind(sock->sock_index, (struct sockaddr *)&(sock->param),
+             sock->addrlen) == SOCKET_ERROR) {
+      net_err(sock, "An error occured while binding");
+      return NULL;
+    }
     printf("Socket bound to address %s and port %s\n", addr, port);
   }
 
@@ -105,11 +118,13 @@ CONNECTION:
   rx_socket_t *conn = malloc(sizeof(rx_socket_t));
   memset(conn, 0, sizeof(rx_socket_t));
 
-  socklen_t addrLen = conn->addrlen;
+  socklen_t addrLen = sock->addrlen;
+
   conn->sock_index =
       accept(sock->sock_index, (struct sockaddr *)&conn->param, &addrLen);
   if (conn->sock_index != INVALID_SOCKET) {
     add_connection(sock, conn);
+    add_connection(conn, sock);
     push_event(make_event(EVENT_CONNECTION, sock, conn));
     goto CONNECTION;
   }
@@ -151,11 +166,15 @@ LISTEN_FOR_DATA:
       recv(socket->sock_index, socket->buffer, sizeof(socket->buffer), 0);
   if (ret != SOCKET_ERROR && ret != PEER_DISCONNECT) {
     socket->buffer[ret] = '\0';
-    push_event(make_event(EVENT_DATA_RECEIVED, socket, NULL));
+    push_event(make_event(EVENT_DATA_RECEIVED, socket,
+                          socket->active_connections
+                              ? socket->active_connections->socket
+                              : NULL));
     goto LISTEN_FOR_DATA;
   }
 
-  push_event(make_event(EVENT_NETWORK_ERROR, socket, NULL));
+  push_event(make_event(EVENT_NETWORK_ERROR, socket,
+                        socket->active_connections->socket));
   net_err(socket, "Error while waiting for data");
 
   return NULL;
@@ -169,9 +188,9 @@ int listen_for_data(rx_socket_t *socket) {
 }
 
 void terminate_socket(rx_socket_t *target, rx_socket_t *socket) {
-  remove_connection(target, socket);
-  if (socket->address)
-    free(socket->address);
-  sock_close(socket->sock_index);
-  free(socket);
+  remove_connection(socket, target);
+  if (target->address)
+    free(target->address);
+  sock_close(target->sock_index);
+  free(target);
 }

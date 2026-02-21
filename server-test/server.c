@@ -50,7 +50,8 @@ void print_connections(rx_socket_t *socket) {
     } while (head);
   }
 }
-
+rx_socket_t *IPV6_SOCKET;
+rx_socket_t *IPV4_SOCKET;
 int main(int argc, char **argv) {
   /* rx_socket_t *socket =
        make_socket(NULL, "8888", get_socket_type(IPV6, 0), SERVER_SOCKET);
@@ -59,13 +60,13 @@ int main(int argc, char **argv) {
    }
    accept_socket(socket);*/
   net_init();
-  rx_socket_t *IPV6_SOCKET =
-      make_socket(NULL, "54515", get_socket_type(IPV6, TCP), SERVER_SOCKET);
+  IPV6_SOCKET =
+      make_socket(NULL, "54521", get_socket_type(IPV6, TCP), SERVER_SOCKET);
   if (!IPV6_SOCKET)
     return -1;
   accept_socket(IPV6_SOCKET);
-  rx_socket_t *IPV4_SOCKET =
-      make_socket(NULL, "54515", get_socket_type(IPV4, TCP), SERVER_SOCKET);
+  IPV4_SOCKET =
+      make_socket(NULL, "54521", get_socket_type(IPV4, TCP), SERVER_SOCKET);
   if (!IPV4_SOCKET)
     return -1;
   accept_socket(IPV4_SOCKET);
@@ -80,7 +81,7 @@ int main(int argc, char **argv) {
       switch (event->type) {
       case EVENT_CONNECTION:
         printf("Client %llu connected from: %s\n",
-               ((rx_socket_t *)event->caller)->sock_index, addr);
+               ((rx_socket_t *)event->param)->sock_index, addr);
         listen_for_data((rx_socket_t *)event->param);
         print_connections(caller);
         char buffer[] = {"A new Client connected"};
@@ -91,7 +92,8 @@ int main(int argc, char **argv) {
         char *msg = malloc(strlen(caller->buffer) + 20);
         snprintf(msg, strlen(caller->buffer) + 20, "%llu:%s",
                  caller->sock_index, caller->buffer);
-        // write_to_clients(caller, msg, strlen(caller->buffer) + 20);
+        write_to_clients((rx_socket_t *)(event)->param, msg,
+                         strlen(caller->buffer) + 20);
         free(msg);
         break;
       case EVENT_NETWORK_ERROR:
@@ -100,8 +102,8 @@ int main(int argc, char **argv) {
         case PEER_DISCONNECT:
         case CONNECTION_TERMINATED:
           printf("A remote host has terminated the connection\n");
-          terminate_socket(caller, (rx_socket_t *)(event->caller));
-          // print_connections();
+          terminate_socket(caller, (rx_socket_t *)(event->param));
+          print_connections((rx_socket_t *)(event->param));
           break;
         }
       }
