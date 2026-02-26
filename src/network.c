@@ -18,7 +18,11 @@ void net_cleanup() {
 }
 
 void net_err(void *cause, char *msg) {
-  printf("Network error occured: (%s). -> %i\n", msg, errno);
+  int err = errno;
+  n_error *str_err = malloc(sizeof(n_error));
+  str_err->error_msg = msg;
+  str_err->err_code = err;
+  push_event(make_event(EVENT_NETWORK_ERROR, cause, str_err));
 }
 
 network_event *pop_event() {

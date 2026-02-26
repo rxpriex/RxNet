@@ -1,8 +1,8 @@
-#include <RxNet/network.h>
 #include <RxNet/socket.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 
 void add_connection(rx_socket_t *source, rx_socket_t *target) {
   rx_connection_t *head = source->active_connections;
@@ -61,12 +61,13 @@ rx_socket_t *make_socket(char *addr, char *port, struct addrinfo ftype,
   rx_socket_t *sock = malloc(sizeof(rx_socket_t));
   memset(sock, 0, sizeof(rx_socket_t));
   struct addrinfo *res;
+  sock->address = addr;
   if (type == SERVER_SOCKET) {
     ftype.ai_flags = AI_PASSIVE;
   }
   int err = getaddrinfo(addr, port, &ftype, &res);
   if (err) {
-    net_err((void *)sock, "Socket creation failed\n");
+    net_err(sock, "Address parsing failed");
     free(sock);
     return NULL;
   }
@@ -77,7 +78,7 @@ rx_socket_t *make_socket(char *addr, char *port, struct addrinfo ftype,
   sock->type = type;
 
   if (sock_indx == INVALID_SOCKET) {
-    net_err((void *)sock, "Socket creation failed\n");
+    net_err(sock, "Socket creation failed\n");
     free(sock);
     return NULL;
   }
@@ -119,17 +120,18 @@ CONNECTION:
   memset(conn, 0, sizeof(rx_socket_t));
 
   socklen_t addrLen = sock->addrlen;
+  conn->addrlen = addrLen;
 
   conn->sock_index =
       accept(sock->sock_index, (struct sockaddr *)&conn->param, &addrLen);
   if (conn->sock_index != INVALID_SOCKET) {
+    conn->address = resolve_host((struct sockaddr *)&conn->param, addrLen);
     add_connection(sock, conn);
     add_connection(conn, sock);
     push_event(make_event(EVENT_CONNECTION, sock, conn));
     goto CONNECTION;
   }
 
-  push_event(make_event(EVENT_NETWORK_ERROR, sock, conn));
   net_err(sock, "Error while accepting connection");
 
   return NULL;
@@ -173,8 +175,6 @@ LISTEN_FOR_DATA:
     goto LISTEN_FOR_DATA;
   }
 
-  push_event(make_event(EVENT_NETWORK_ERROR, socket,
-                        socket->active_connections->socket));
   net_err(socket, "Error while waiting for data");
 
   return NULL;

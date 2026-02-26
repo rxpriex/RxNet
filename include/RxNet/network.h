@@ -37,11 +37,15 @@ typedef int socket_t;
 
 typedef enum {
   EVENT_CONNECTION,
-  EVENT_ACCEPTING_ERROR,
   EVENT_DATA_RECEIVED,
-  EVENT_ERROR_WHILE_WAITING,
   EVENT_NETWORK_ERROR,
+  ENUM_TYPE_MAX_VALUE,
 } event_type;
+
+typedef struct {
+  char *error_msg;
+  int err_code;
+} n_error;
 
 /*
  * @brief a struct that will get pushed onto the event queue
@@ -80,17 +84,18 @@ extern void net_cleanup(void);
  * @brief A function when a socket error occurs
  * @param The socket that caused the error
  */
-extern void net_err(void *, char *);
+extern void net_err(void *cause, char *msg);
 
 /*
  * @brief Pushes a new socket event to the event_queue
  * @param type The type of event
  * @param caller The object that called the event(might be 0)
  */
-extern void push_event(network_event *);
+extern void push_event(network_event *event);
 
 /*
  * @brief Pops the oldest socket event from the event_queue
+ * @return The oldest socket event
  */
 extern network_event *pop_event();
 
@@ -99,8 +104,9 @@ extern network_event *pop_event();
  * @param type The type of event
  * @param caller The cause/location of the event
  * @param param Optional parameter
+ * @return The new event
  */
-network_event *make_event(event_type, void *, void *);
+network_event *make_event(event_type type, void *caller, void *param);
 
 #ifdef __cplusplus
 }
