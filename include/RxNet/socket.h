@@ -21,7 +21,7 @@ typedef struct {
   int type;
   char *address;
 
-  char buffer[1024];
+  void *buffer;
   int size_of_buffer;
 } rx_socket_t;
 
@@ -69,7 +69,7 @@ extern int accept_socket(rx_socket_t *socket);
  * @brief Send data to the connected socket
  * @param socket The socket that sends data
  */
-extern int send_data(rx_socket_t *socket, char *data, int data_size);
+extern int send_data(rx_socket_t *socket, void *data, int data_size);
 
 /*
  * @brief Listen for data in a seperate thread and push events in case data

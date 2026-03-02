@@ -1,4 +1,5 @@
 #include <RxNet/server.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <string.h>
 
@@ -7,7 +8,7 @@ void generic_handler(network_event *event) {
   case EVENT_CONNECTION:
     printf("New client connected from %s\n",
            ((rx_socket_t *)event->param)->address);
-    char msg[] = {"Data received"};
+    char msg[] = {"Server: Connection Successfull"};
     send_data(event->param, msg, sizeof(msg));
     listen_for_data((rx_socket_t *)event->param);
     break;
@@ -18,8 +19,9 @@ void generic_handler(network_event *event) {
     memcpy((socket->buffer + y + 1), socket->buffer, (x + 1));
     if (socket->address)
       memcpy(socket->buffer, socket->address, y);
-    socket->buffer[strlen(socket->address)] = ':';
-    printf("Data Received: %s\n", ((rx_socket_t *)event->caller)->buffer);
+    char *sock_buffer = (char *)(socket->buffer);
+    sock_buffer[strlen(socket->address)] = ':';
+    printf("Data Received: %s\n", sock_buffer);
     send_buffer(SOCK_ALL, ((rx_socket_t *)event->caller)->buffer,
                 sizeof(((rx_socket_t *)event->caller)->buffer));
     break;

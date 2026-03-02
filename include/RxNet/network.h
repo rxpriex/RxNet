@@ -47,6 +47,15 @@ typedef struct {
   int err_code;
 } n_error;
 
+typedef enum { REQUEST_DATA, REQUEST_DATA_SENT, REQUEST_CONFIRM } request_type;
+
+typedef struct {
+  request_type type;
+  int id;
+  long packet_size;
+  int parameter;
+} network_request;
+
 /*
  * @brief a struct that will get pushed onto the event queue
  * @field type The type of event

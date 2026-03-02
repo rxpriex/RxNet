@@ -25,7 +25,7 @@ int handle_events(void *args) {
 int main(int argc, char **argv) {
   printf("-------------Client-Test-Executable--------------\n");
   assert(argc == 3);
-  client_startup(argv[1], argv[2], IPV4);
+  client_startup(argv[1], argv[2], UNSPEC);
   listen_for_data(get_socket());
   thrd_t thread;
   thrd_create(&thread, handle_events, NULL);

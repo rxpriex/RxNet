@@ -2,7 +2,6 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 
 void add_connection(rx_socket_t *source, rx_socket_t *target) {
   rx_connection_t *head = source->active_connections;
@@ -153,7 +152,17 @@ int accept_socket(rx_socket_t *socket) {
   return 1;
 }
 
-int send_data(rx_socket_t *socket, char *data, int data_size) {
+int send_data(rx_socket_t *socket, void *data, int data_size) {
+  network_request request;
+  request.type = REQUEST_DATA_SENT;
+  request.id = 0;
+  request.packet_size = data_size;
+  request.parameter = 0;
+  if (send(socket->sock_index, &request, sizeof(request), 0) == SOCKET_ERROR) {
+    net_err(socket, "Error while sending request");
+    return 0;
+  }
+
   if (send(socket->sock_index, data, data_size, 0) == SOCKET_ERROR) {
     net_err(socket, "Error while sending data");
     return 0;
@@ -164,17 +173,32 @@ int send_data(rx_socket_t *socket, char *data, int data_size) {
 static void *wait_on_data(void *args) {
   rx_socket_t *socket = (rx_socket_t *)args;
 LISTEN_FOR_DATA:
-  long ret =
-      recv(socket->sock_index, socket->buffer, sizeof(socket->buffer), 0);
-  if (ret != SOCKET_ERROR && ret != PEER_DISCONNECT) {
-    socket->buffer[ret] = '\0';
-    push_event(make_event(EVENT_DATA_RECEIVED, socket,
-                          socket->active_connections
-                              ? socket->active_connections->socket
-                              : NULL));
-    goto LISTEN_FOR_DATA;
+  network_request request;
+  int rq_ret = recv(socket->sock_index, &request, sizeof(network_request), 0);
+  if (rq_ret == SOCKET_ERROR || rq_ret == PEER_DISCONNECT) {
+    goto ERR;
   }
+  printf("REQUEST received, datasize %li\n", request.packet_size);
+  long bytes_read = 0;
 
+  socket->buffer = malloc(request.packet_size);
+
+  while (bytes_read < request.packet_size) {
+    long ret = recv(socket->sock_index, socket->buffer + bytes_read,
+                    request.packet_size - bytes_read, 0);
+    printf("Data received, %li bytes\n", ret);
+    if (ret == SOCKET_ERROR || ret == PEER_DISCONNECT) {
+      goto ERR;
+    }
+    bytes_read += ret;
+  }
+  socket->size_of_buffer = request.packet_size;
+  printf("Request complete\n");
+
+  push_event(make_event(EVENT_DATA_RECEIVED, socket, socket->buffer));
+  goto LISTEN_FOR_DATA;
+
+ERR:
   net_err(socket, "Error while waiting for data");
 
   return NULL;
